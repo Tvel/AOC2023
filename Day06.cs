@@ -32,7 +32,6 @@ public class Day06
         var raceValues = ParsePart1(input);
         var winWays = new int[raceValues.Length];
 
-
         for (var index = 0; index < raceValues.Length; index++)
         {
             (long time, long distance) = raceValues[index];
@@ -111,26 +110,21 @@ public class Day06
 
     private long SolvePart2(string input)
     {
-        var raceValues = ParsePart2(input);
+        (long time, long distance) = ParsePart2(input);
         long winWays = 0;
 
+        for (long holdTime = 1; holdTime < time; holdTime++)
         {
-            (long time, long distance) = raceValues;
-
-            for (long holdTime = 1; holdTime < time; holdTime++)
+            long remainingTime = time - holdTime;
+            long travelLength = holdTime * remainingTime;
+            if (travelLength > distance)
             {
-                long remainingTime = time - holdTime;
-                long travelLength = holdTime * remainingTime;
-                if (travelLength > distance)
-                {
-                    winWays++;
-                }
+                winWays++;
             }
         }
-
+        
         return winWays;
     }
-
 
     private static (long Time, long Distance) ParsePart2(string input)
     {
@@ -163,5 +157,4 @@ public class Day06
 
         return (long.Parse(new string(times.ToArray())), long.Parse(new string(distances.ToArray())) );
     }
-
 }
