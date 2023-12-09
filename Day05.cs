@@ -43,7 +43,7 @@ public class Day05
     [Fact]
     void Part2_Sample()
     {
-        long result = SolvePart2(Input.Sample1);
+        long result = SolvePart2Slow(Input.Sample1);
         Assert.Equal(46, result);
     }
 
@@ -55,6 +55,49 @@ public class Day05
     }
 
     private long SolvePart2(string input)
+    {
+        (List<long> seeds, Dictionary<string, Mapping> mappings) = Parser.Parse(input);
+
+        var chunks = seeds.Chunk(2).ToArray();
+
+        var soilToSeed = mappings["seed-to-soil"].Reverse();
+        var fertilizerToSoil = mappings["soil-to-fertilizer"].Reverse();
+        var waterToFertilizer = mappings["fertilizer-to-water"].Reverse();
+        var lightToWater = mappings["water-to-light"].Reverse();
+        var temperatureToLight = mappings["light-to-temperature"].Reverse();
+        var humidityToTemperature = mappings["temperature-to-humidity"].Reverse();
+        var locationToHumidity = mappings["humidity-to-location"].Reverse();
+
+        long min = long.MaxValue;
+
+        var locationsBySource = locationToHumidity.Mappings.Select(x => (x.Value.sourceStart, x.Value.sourceEnd)).OrderBy(x => x.sourceStart).ToArray();
+
+        foreach ((long locationStart, long locationEnd) in locationsBySource)
+        {
+            for (long l = locationStart; l <= locationEnd; l++)
+            {
+                var humidity = locationToHumidity[l];
+                var temperature = humidityToTemperature[humidity];
+                var light = temperatureToLight[temperature];
+                var water = lightToWater[light];
+                var fertilizer = waterToFertilizer[water];
+                var soil = fertilizerToSoil[fertilizer];
+                var seed = soilToSeed[soil];
+
+                foreach (var seedChunk in chunks)
+                {
+                    if (seed >= seedChunk[0] && seed <= (seedChunk[0] + seedChunk[1]))
+                    {
+                        return l;
+                    }
+                }
+            }
+        }
+
+        return min;
+    }
+
+    private long SolvePart2Slow(string input)
     {
         (List<long> seeds, Dictionary<string, Mapping> mappings) = Parser.Parse(input);
 
@@ -160,21 +203,34 @@ file static class Parser
 
 file record Mapping(string From, string To)
 {
-    private readonly List<(long sourceStart, long sourceEnd, long destinationStart)?> mappingList = new();
+    private readonly List<(long sourceStart, long sourceEnd, long destinationStart, long range)?> mappingList = new();
     
     public void Add(long destination, long source, long range)
     {
-        mappingList.Add((source, source + range - 1, destination));
+        mappingList.Add((source, source + range - 1, destination, range));
     }
 
     public long Get(long sourceValue)
     {
         var map = mappingList
-                      .FirstOrDefault(x => sourceValue >= x.Value.sourceStart && sourceValue <= x.Value.sourceEnd) ?? (sourceValue, sourceValue, sourceValue);
+                      .FirstOrDefault(x => sourceValue >= x.Value.sourceStart && sourceValue <= x.Value.sourceEnd) ?? (sourceValue, sourceValue, sourceValue, 1);
 
         return map.destinationStart + (sourceValue - map.sourceStart);
     }
     public long this[long index] => Get(index);
+
+    public IReadOnlyCollection<(long sourceStart, long sourceEnd, long destinationStart, long range)?> Mappings => mappingList.AsReadOnly();
+
+    public Mapping Reverse()
+    {
+        var mapping = new Mapping(this.To, this.From);
+
+        foreach (var map in mappingList)
+        {
+            mapping.Add(map.Value.sourceStart, map.Value.destinationStart, map.Value.range);
+        }
+        return mapping;
+    }
 }
 
 file static class Input
